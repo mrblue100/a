@@ -1,1 +1,496 @@
-hello
+1.  Create a form with validation and display the data.
+import 'package:flutter/material.dart';
+
+void main() => runApp(MaterialApp(
+      title: 'Flutter App',
+      home: MyForm(),
+    ));
+
+class MyForm extends StatelessWidget {
+  final _formKey = GlobalKey<FormState>();
+  String? _name, _email;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Form Validation Demo')),
+      body: Form(
+        key: _formKey,
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              _buildTextFormField(
+                  'Name',
+                  (value) => value!.isEmpty ? 'Please enter your name' : null,
+                  (value) => _name = value),
+              _buildTextFormField('Email', (value) {
+                if (value!.isEmpty) {
+                  return 'Please Enter Your Email';
+                }
+                if (!value.contains('@') || !value.contains('.')) {
+                  return 'Please Enter Valid Email';
+                }
+              }, (value) => _email = value),
+              SizedBox(height: 16.0),
+              _buildSubmitButton(context),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextFormField(String labelText,
+      String? Function(String?)? validator, void Function(String?)? onSaved) {
+    return TextFormField(
+      decoration: InputDecoration(labelText: labelText),
+      validator: validator,
+      onSaved: onSaved,
+    );
+  }
+
+  Widget _buildSubmitButton(BuildContext context) {
+    return Center(
+      child: ElevatedButton(
+        onPressed: () {
+          if (_formKey.currentState!.validate()) {
+            _formKey.currentState!.save();
+            _showData(context);
+          }
+        },
+        child: Text('Submit'),
+      ),
+    );
+  }
+
+  void _showData(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Your Details'),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Text('Name: $_name'),
+                Text('Email: $_email'),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+
+2. Create a form and display the message using a toast or snackbar  once the user has successfully registered.
+import 'package:flutter/material.dart';
+
+void main() => runApp(MaterialApp(
+      title: 'Flutter App',
+      home: Home(),
+    ));
+
+class Home extends StatelessWidget {
+  final _formKey = GlobalKey<FormState>();
+  final TextEditingController _name = TextEditingController();
+  final TextEditingController _email = TextEditingController();
+
+  void _submitForm(BuildContext context) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('Registration Successful')));
+    _formKey.currentState?.reset();
+    _name.clear();
+    _email.clear();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Registration')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                decoration: InputDecoration(labelText: 'Name'),
+                controller: _name,
+                validator: (value) =>
+                    value!.isEmpty ? 'Please Enter Your Name' : null,
+              ),
+              TextFormField(
+                decoration: InputDecoration(labelText: 'Email'),
+                controller: _email,
+                validator: (value) {
+                  if (value!.isEmpty) {
+                    return 'Please Enter Your Email';
+                  }
+                  if (!value.contains('@') || !value.contains('.')) {
+                    return 'Please Enter a Valid Email';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 30),
+              Center(
+                child: ElevatedButton(
+                  onPressed: () {
+                    if (_formKey.currentState!.validate()) {
+                      _submitForm(context);
+                    }
+                  },
+                  child: Text('Register'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+3. Connect your form with firebase and display the data in your firebase app
+import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+void main() => runApp(MaterialApp(
+      title: 'Firebase Form Demo',
+      home: RegistrationForm(),
+    ));
+
+class RegistrationForm extends StatefulWidget {
+  @override
+  _RegistrationFormState createState() => _RegistrationFormState();
+}
+
+class _RegistrationFormState extends State<RegistrationForm> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+
+  Future<void> _submitForm() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final uid = user.uid;
+        await FirebaseFirestore.instance.collection('users').doc(uid).set({
+          'name': _nameController.text,
+          'email': _emailController.text,
+        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Registration Successful')));
+        _formKey.currentState!.reset();
+        _nameController.clear();
+        _emailController.clear();
+      }
+    } catch (error) {
+      print(error);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: Registration Failed')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Registration Form')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                controller: _nameController,
+                decoration: InputDecoration(labelText: 'Name'),
+                validator: (value) => value!.isEmpty ? 'Please enter your name' : null,
+              ),
+              TextFormField(
+                controller: _emailController,
+                decoration: InputDecoration(labelText: 'Email'),
+                validator: (value) => value!.isEmpty ? 'Please enter your email' : null,
+              ),
+              SizedBox(height: 16.0),
+              ElevatedButton(
+                onPressed: () {
+                  if (_formKey.currentState!.validate()) {
+                    _submitForm();
+                  }
+                },
+                child: Text('Register'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+4. Design a page with navigation/menu bar/navigation bar 
+import 'package:flutter/material.dart';
+
+void main() => runApp(MyApp());
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(title: 'Flutter App', home: MyHomePage());
+  }
+}
+
+class MyHomePage extends StatefulWidget {
+  @override
+  _MyHomePageState createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  int _index= 0;
+
+  static const List<Widget> _list = <Widget>[
+    Text('Page 1'),
+    Text('Page 2'),
+    Text('Page 3'),
+  ];
+
+  void _onItemTapped(int index) => setState(() => _index= index);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Navigation Bar Demo')),
+      body: Center(child: _list[_index]),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+        ],
+        currentIndex: _index,
+        selectedItemColor: Colors.blue,
+        onTap: _onItemTapped,
+      ),
+    );
+  }
+}
+
+
+5. Design a page with table ,row,container,gridview ,listview  
+import 'package:flutter/material.dart';
+
+void main() => runApp(MyApp());
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(title: 'Flutter App', home: MyHomePage());
+  }
+}
+
+class MyHomePage extends StatelessWidget {
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: EdgeInsets.all(16.0),
+      child: Text(
+        title,
+        style: TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _buildColoredContainer(Color color, String text) {
+    return Container(
+      width: 100,
+      height: 100,
+      color: color,
+      child: Center(child: Text(text)),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Layout Demo')),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionTitle('Table Example'),
+            Table(
+              border: TableBorder.all(),
+              children: [
+                TableRow(children: [
+                  TableCell(child: Center(child: Text('Cell 1'))),
+                  TableCell(child: Center(child: Text('Cell 2'))),
+                  TableCell(child: Center(child: Text('Cell 3'))),
+                ]),
+                TableRow(children: [
+                  TableCell(child: Center(child: Text('Cell 4'))),
+                  TableCell(child: Center(child: Text('Cell 5'))),
+                  TableCell(child: Center(child: Text('Cell 6'))),
+                ]),
+              ],
+            ),
+            _buildSectionTitle('Row and Container Example'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildColoredContainer(Colors.red, 'Container 1'),
+                _buildColoredContainer(Colors.green, 'Container 2'),
+                _buildColoredContainer(Colors.blue, 'Container 3'),
+              ],
+            ),
+            _buildSectionTitle('GridView Example'),
+            GridView.count(
+              shrinkWrap: true,
+              crossAxisCount: 2,
+              children: List.generate(4, (index) {
+                return _buildColoredContainer(Colors.yellow, 'Item $index');
+              }),
+            ),
+            _buildSectionTitle('ListView Example'),
+            ListView.builder(
+              shrinkWrap: true,
+              itemCount: 5,
+              itemBuilder: (context, index) {
+                return ListTile(
+                  title: Text('Item $index'),
+                  leading: Icon(Icons.star),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+6. Gestures and animation  /Image display 
+import 'package:flutter/material.dart';
+
+void main() => runApp(MaterialApp(home: Home()));
+
+class Home extends StatefulWidget {
+  @override
+  _HomeState createState() => _HomeState();
+}
+
+class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller =
+        AnimationController(vsync: this, duration: Duration(seconds: 2));
+    _animation = Tween<double>(begin: 0, end: 300).animate(_controller);
+    _controller.forward(); // Start the animation when the widget initializes
+  }
+
+  @override
+  Widget build(BuildContext context) => Center(
+        child: GestureDetector(
+          onTap: () => _controller.status == AnimationStatus.completed
+              ? _controller.reverse()
+              : _controller.forward(),
+          child: AnimatedBuilder(
+            animation: _animation,
+            builder: (context, child) => Container(
+              width: _animation.value,
+              height: _animation.value,
+              color: Colors.blue,
+            ),
+          ),
+        ),
+      );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+}
+
+
+7. Design a responsive page
+import 'package:flutter/material.dart';
+
+void main() => runApp(MaterialApp(
+      title: 'Flutter App',
+      home: MyHomePage(),
+    ));
+
+class MyHomePage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Responsive Page')),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth > 600) {
+            return _buildTwoColumnLayout();
+          } else {
+            return _buildSingleColumnLayout();
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildTwoColumnLayout() {
+    return Row(
+      children: [
+        Expanded(
+          flex: 1,
+          child: _buildColumn('Left Column', Colors.blue),
+        ),
+        Expanded(
+          flex: 2,
+          child: _buildColumn('Right Column', Colors.orange),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSingleColumnLayout() {
+    return Column(
+      children: [
+        Expanded(child: _buildColumn('Top Section', Colors.blue)),
+        Expanded(child: _buildColumn('Bottom Section', Colors.orange)),
+      ],
+    );
+  }
+
+  Widget _buildColumn(String text, Color color) {
+    return Container(
+      color: color,
+      height: double.infinity,
+      child: Center(
+        child: Text(
+          text,
+          style: TextStyle(color: Colors.white, fontSize: 20),
+        ),
+      ),
+    );
+  }
+}
+
+
